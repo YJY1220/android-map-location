@@ -1,7 +1,9 @@
 package campus.tech.kakao.map
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
 import com.kakao.vectormap.MapView
@@ -21,25 +23,8 @@ import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextStyle
+import com.kakao.vectormap.camera.CameraAnimation
 import com.kakao.vectormap.camera.CameraUpdateFactory
-
-
-private val Any.longitude: Double
-    get() {
-        TODO("Not yet implemented")
-    }
-private val Any.latitude: Double
-    get() {
-        TODO("Not yet implemented")
-    }
-private val Any.mapPointGeoCoord: Any
-    get() {
-        TODO("Not yet implemented")
-    }
-private val Any.mapCenterPoint: Any
-    get() {
-        TODO("Not yet implemented")
-    }
 
 class MainActivity : AppCompatActivity() {
 
@@ -56,9 +41,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomSheetLayout: FrameLayout
     private var selectedItems = mutableListOf<MapItem>()
 
-    private var savedLatitude: Double = 37.5642
-    private var savedLongitude: Double = 127.0
-    private var savedZoomLevel: Float = 10.0f
+    companion object {
+        private const val SEARCH_REQUEST_CODE = 1
+        private const val PREFS_NAME = "LastMarkerPrefs"
+        private const val PREF_LATITUDE = "lastLatitude"
+        private const val PREF_LONGITUDE = "lastLongitude"
+        private const val PREF_PLACE_NAME = "lastPlaceName"
+        private const val PREF_ROAD_ADDRESS_NAME = "lastRoadAddressName"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,8 +56,6 @@ class MainActivity : AppCompatActivity() {
 
         // 카카오 지도 초기화
         mapView = findViewById(R.id.map_view)
-        loadData() // 저장된 위치 불러오기
-
         mapView.start(object : MapLifeCycleCallback() {
             override fun onMapDestroy() {
                 // 지도 API가 정상적으로 종료될 때 호출됨
@@ -80,7 +68,7 @@ class MainActivity : AppCompatActivity() {
             override fun onMapReady(map: KakaoMap) {
                 kakaoMap = map
                 labelLayer = kakaoMap.labelManager?.layer!!
-                restoreCameraPosition()
+                loadLastMarkerPosition()  // 마지막 마커 위치 불러오기
                 processIntentData()
             }
         })
@@ -105,13 +93,13 @@ class MainActivity : AppCompatActivity() {
         errorDetails = findViewById(R.id.error_details)
         retryButton = findViewById(R.id.retry_button)
 
-        // Bottomsheet 초기화
+        // BottomSheet 초기화
         bottomSheetLayout = findViewById(R.id.bottomSheetLayout)
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheetLayout)
         bottomSheetTitle = findViewById(R.id.bottomSheetTitle)
         bottomSheetAddress = findViewById(R.id.bottomSheetAddress)
 
-        // 처음에는 bottomsheet 숨기기
+        // 처음에는 BottomSheet 숨기기
         bottomSheetLayout.visibility = View.GONE
     }
 
@@ -132,7 +120,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        saveCameraPosition()
         super.onPause()
         mapView.pause()  // MapView의 pause 호출
     }
@@ -158,7 +145,7 @@ class MainActivity : AppCompatActivity() {
             override fun onMapReady(kakaoMap: KakaoMap) {
                 this@MainActivity.kakaoMap = kakaoMap
                 labelLayer = kakaoMap.labelManager?.layer!!
-                restoreCameraPosition()
+                loadLastMarkerPosition()  // 마지막 마커 위치 불러오기
             }
         })
     }
@@ -185,10 +172,16 @@ class MainActivity : AppCompatActivity() {
                     selectedItems.add(MapItem(id, place_name, road_address_name, category_group_name, x, y))
                 }
                 addLabel(placeName, roadAddressName, x, y)
+                if (placeName != null) {
+                    if (roadAddressName != null) {
+                        saveLastMarkerPosition(x, y, placeName, roadAddressName)
+                    }
+                }  // 마커 위치 저장
             }
         }
     }
 
+    // label marker
     private fun addLabel(placeName: String?, roadAddressName: String?, x: Double, y: Double) {
         if (placeName != null && roadAddressName != null) {
             val position = LatLng.from(y, x)
@@ -216,6 +209,9 @@ class MainActivity : AppCompatActivity() {
             // 카메라 이동
             moveCamera(position)
 
+            // 마커 위치 저장
+            saveLastMarkerPosition(x, y, placeName, roadAddressName)
+
             // bottom sheet 업데이트
             bottomSheetTitle.text = placeName
             bottomSheetAddress.text = roadAddressName
@@ -225,51 +221,36 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun moveCamera(position: LatLng) {
-        val cameraUpdate = CameraUpdateFactory.newCenterPosition(position)
-        kakaoMap.moveCamera(cameraUpdate)
+        kakaoMap.moveCamera(
+            CameraUpdateFactory.newCenterPosition(position),
+            CameraAnimation.from(10, false, false)
+        )
     }
 
-    private fun restoreCameraPosition() {
-        val savedPosition = loadData()
-        val target = LatLng.from(savedPosition.first, savedPosition.second)
-        val cameraUpdate = CameraUpdateFactory.newCenterPosition(target).apply {
-            zoomLevel(savedZoomLevel)
+    private fun saveLastMarkerPosition(latitude: Double, longitude: Double, placeName: String, roadAddressName: String) {
+        val sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        with(sharedPreferences.edit()) {
+            putFloat(PREF_LATITUDE, latitude.toFloat())
+            putFloat(PREF_LONGITUDE, longitude.toFloat())
+            putString(PREF_PLACE_NAME, placeName)
+            putString(PREF_ROAD_ADDRESS_NAME, roadAddressName)
+            apply()
         }
-        kakaoMap.moveCamera(cameraUpdate)
     }
 
-    private fun zoomLevel(savedZoomLevel: Float) {
-        TODO("Not yet implemented")
+    private fun loadLastMarkerPosition() {
+        val sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (sharedPreferences.contains(PREF_LATITUDE) && sharedPreferences.contains(PREF_LONGITUDE)) {
+            val latitude = sharedPreferences.getFloat(PREF_LATITUDE, 0.0f).toDouble()
+            val longitude = sharedPreferences.getFloat(PREF_LONGITUDE, 0.0f).toDouble()
+            val placeName = sharedPreferences.getString(PREF_PLACE_NAME, "") ?: ""
+            val roadAddressName = sharedPreferences.getString(PREF_ROAD_ADDRESS_NAME, "") ?: ""
+            if (placeName.isNotEmpty() && roadAddressName.isNotEmpty()) {
+                Log.d("MainActivity", "Loaded last marker position: lat=$latitude, lon=$longitude, placeName=$placeName, roadAddressName=$roadAddressName")
+                addLabel(placeName, roadAddressName, longitude, latitude)
+            }
+        } else {
+            Log.d("MainActivity", "No last marker position found in SharedPreferences")
+        }
     }
-
-    private fun saveCameraPosition() {
-        val currentPosition = kakaoMap.mapCenterPoint.mapPointGeoCoord
-        val zoom = kakaoMap.cameraPosition?.zoomLevel
-        saveData(currentPosition.latitude, currentPosition.longitude, zoom)
-    }
-
-    private fun saveData(latitude: Double, longitude: Double, zoom: Int?) {
-        val pref = getSharedPreferences("pref", 0)
-        val edit = pref.edit()
-        edit.putString("latitude", latitude.toString())
-        edit.putString("longitude", longitude.toString())
-        edit.putFloat("zoom", zoom)
-        edit.apply()
-    }
-
-    private fun loadData(): Triple<Double, Double, Float> {
-        val pref = getSharedPreferences("pref", 0)
-        val latitude = pref.getString("latitude", "37.5642")?.toDouble() ?: 37.5642
-        val longitude = pref.getString("longitude", "127.0")?.toDouble() ?: 127.0
-        val zoom = pref.getFloat("zoom", 10.0f)
-        return Triple(latitude, longitude, zoom)
-    }
-
-    companion object {
-        private const val SEARCH_REQUEST_CODE = 1
-    }
-}
-
-private fun Any.putFloat(s: String, zoom: Int?) {
-
 }
