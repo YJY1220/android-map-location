@@ -1,5 +1,3 @@
-// MainActivity.kt
-
 package campus.tech.kakao.map
 
 import android.app.Activity
@@ -18,7 +16,6 @@ import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.KakaoMapReadyCallback
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.LatLng
-import com.kakao.vectormap.label.Label
 import com.kakao.vectormap.label.LabelLayer
 import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
@@ -39,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<FrameLayout>
     private lateinit var bottomSheetTitle: TextView
     private lateinit var bottomSheetAddress: TextView
+    private var selectedItems = mutableListOf<MapItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +56,7 @@ class MainActivity : AppCompatActivity() {
             override fun onMapReady(map: KakaoMap) {
                 kakaoMap = map
                 labelLayer = kakaoMap.labelManager?.layer!!
+                processIntentData()
             }
         })
 
@@ -65,6 +64,13 @@ class MainActivity : AppCompatActivity() {
         val searchEditText = findViewById<EditText>(R.id.search_edit_text)
         searchEditText.setOnClickListener {
             val intent = Intent(this, SearchActivity::class.java)
+            intent.putExtra("selectedItemsSize", selectedItems.size)
+            selectedItems.forEachIndexed { index, mapItem ->
+                intent.putExtra("id_$index", mapItem.id)
+                intent.putExtra("place_name_$index", mapItem.place_name)
+                intent.putExtra("road_address_name_$index", mapItem.road_address_name)
+                intent.putExtra("category_group_name_$index", mapItem.category_group_name)
+            }
             startActivityForResult(intent, SEARCH_REQUEST_CODE)
         }
 
@@ -79,6 +85,16 @@ class MainActivity : AppCompatActivity() {
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
         bottomSheetTitle = findViewById(R.id.bottomSheetTitle)
         bottomSheetAddress = findViewById(R.id.bottomSheetAddress)
+    }
+
+    private fun processIntentData() {
+        val placeName = intent.getStringExtra("place_name")
+        val roadAddressName = intent.getStringExtra("road_address_name")
+        val x = intent.getDoubleExtra("x", 0.0)
+        val y = intent.getDoubleExtra("y", 0.0)
+        if (placeName != null && roadAddressName != null) {
+            addLabel(placeName, roadAddressName, x, y)
+        }
     }
 
     override fun onResume() {
@@ -124,11 +140,23 @@ class MainActivity : AppCompatActivity() {
                 val roadAddressName = it.getStringExtra("road_address_name")
                 val x = it.getDoubleExtra("x", 0.0)
                 val y = it.getDoubleExtra("y", 0.0)
+                selectedItems.clear()
+                val selectedItemsSize = it.getIntExtra("selectedItemsSize", 0)
+                for (i in 0 until selectedItemsSize) {
+                    val id = it.getStringExtra("id_$i") ?: ""
+                    val place_name = it.getStringExtra("place_name_$i") ?: ""
+                    val road_address_name = it.getStringExtra("road_address_name_$i") ?: ""
+                    val category_group_name = it.getStringExtra("category_group_name_$i") ?: ""
+                    val x = it.getDoubleExtra("x_$i", 0.0)
+                    val y = it.getDoubleExtra("y_$i", 0.0)
+                    selectedItems.add(MapItem(id, place_name, road_address_name, category_group_name, x, y))
+                }
                 addLabel(placeName, roadAddressName, x, y)
             }
         }
     }
 
+    //bottomsheet에 정보추가하도록 바꿈
     private fun addLabel(placeName: String?, roadAddressName: String?, x: Double, y: Double) {
         if (placeName != null && roadAddressName != null) {
             val position = LatLng.from(y, x)
@@ -157,7 +185,7 @@ class MainActivity : AppCompatActivity() {
             // 카메라 이동
             moveCamera(position)
 
-            // 하단 텍스트 업데이트
+            // BottomSheet에 정보 표시
             bottomSheetTitle.text = placeName
             bottomSheetAddress.text = roadAddressName
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
