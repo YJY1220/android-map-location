@@ -1,7 +1,9 @@
 package campus.tech.kakao.map
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.View
 import android.widget.EditText
@@ -38,10 +40,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomSheetAddress: TextView
     private lateinit var bottomSheetLayout: FrameLayout
     private var selectedItems = mutableListOf<MapItem>()
+    private lateinit var sharedPreferences: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        sharedPreferences = getSharedPreferences("kakao_map_prefs", Context.MODE_PRIVATE)
 
         // 카카오 지도 초기화
         mapView = findViewById(R.id.map_view)
@@ -57,6 +62,17 @@ class MainActivity : AppCompatActivity() {
             override fun onMapReady(map: KakaoMap) {
                 kakaoMap = map
                 labelLayer = kakaoMap.labelManager?.layer!!
+
+                // 마지막 저장된 카메라 위치로 이동
+                val lastLat = sharedPreferences.getFloat("last_lat", 0.0f).toDouble()
+                val lastLng = sharedPreferences.getFloat("last_lng", 0.0f).toDouble()
+                val lastZoom = sharedPreferences.getFloat("last_zoom", 10.0f)
+                if (lastLat != 0.0 && lastLng != 0.0) {
+                    kakaoMap.moveCamera(
+                        CameraUpdateFactory.zoomIn(LatLng(lastLat, lastLng), lastZoom.toDouble()),
+                        CameraAnimation.from(0, false, false)
+                    )
+                }
                 processIntentData()
             }
         })
@@ -108,7 +124,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        saveCameraPosition()
         mapView.pause()  // MapView의 pause 호출
+    }
+
+    private fun saveCameraPosition() {
+        val cameraPosition = kakaoMap.cameraPosition
+        val editor = sharedPreferences.edit()
+        editor.putFloat("last_lat", cameraPosition.target.latitude.toFloat())
+        editor.putFloat("last_lng", cameraPosition.target.longitude.toFloat())
+        editor.putFloat("last_zoom", cameraPosition.zoom.toFloat())
+        editor.apply()
     }
 
     private fun showErrorScreen(error: Exception) {
