@@ -1,3 +1,5 @@
+// SelectedAdapter.kt
+
 package campus.tech.kakao.map
 
 import android.view.LayoutInflater
@@ -6,18 +8,17 @@ import androidx.recyclerview.widget.RecyclerView
 import campus.tech.kakao.map.databinding.ItemSelectedBinding
 
 class SelectedAdapter(
-    private val onItemRemoved: (MapItem) -> Unit
+    private val onItemRemoved: (MapItem) -> Unit,
+    private val onItemClicked: (MapItem) -> Unit
 ) : RecyclerView.Adapter<SelectedAdapter.SelectedViewHolder>() {
 
     private var items: List<MapItem> = emptyList()
-
 
     fun submitList(newItems: List<MapItem>) {
         items = newItems
         notifyDataSetChanged()
     }
 
-    //viewHolder 생성 메서드
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SelectedViewHolder {
 
         val binding = ItemSelectedBinding.inflate(
@@ -44,6 +45,7 @@ class SelectedAdapter(
             binding.apply {
                 selectedItemName.text = item.place_name //상단에 이름만 표시
                 deleteButton.setOnClickListener { onItemRemoved(item) }
+                root.setOnClickListener { onItemClicked(item) } // 클릭 시 검색
             }
         }
     }

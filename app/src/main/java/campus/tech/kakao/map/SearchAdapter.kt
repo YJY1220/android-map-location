@@ -1,3 +1,5 @@
+// SearchAdapter.kt
+
 package campus.tech.kakao.map
 
 import android.view.LayoutInflater
