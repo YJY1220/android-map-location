@@ -132,6 +132,7 @@ class MainActivity : AppCompatActivity() {
         })  // 지도 다시 시작
     }
 
+    //지도 돌아갔다가 다시 검색페이지 돌아올 때 해당 저장된 검색어 남아있도록 하기 위함
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == SEARCH_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
