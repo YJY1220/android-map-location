@@ -68,8 +68,8 @@ class MainActivity : AppCompatActivity() {
             override fun onMapReady(map: KakaoMap) {
                 kakaoMap = map
                 labelLayer = kakaoMap.labelManager?.layer!!
-                loadLastMarkerPosition()  // 마지막 마커 위치 불러오기
-                processIntentData()
+                // 마지막 마커 위치 불러오기
+                loadLastMarkerPosition()
             }
         })
 
@@ -172,11 +172,9 @@ class MainActivity : AppCompatActivity() {
                     selectedItems.add(MapItem(id, place_name, road_address_name, category_group_name, x, y))
                 }
                 addLabel(placeName, roadAddressName, x, y)
-                if (placeName != null) {
-                    if (roadAddressName != null) {
-                        saveLastMarkerPosition(x, y, placeName, roadAddressName)
-                    }
-                }  // 마커 위치 저장
+                if (placeName != null && roadAddressName != null) {
+                    saveLastMarkerPosition(x, y, placeName, roadAddressName)  // 마커 위치 저장
+                }
             }
         }
     }
@@ -198,14 +196,6 @@ class MainActivity : AppCompatActivity() {
                 LabelOptions.from(placeName, position).setStyles(styles).setTexts(placeName)
             )
 
-            kakaoMap.setOnLabelClickListener { map, layer, label ->
-                bottomSheetTitle.text = placeName
-                bottomSheetAddress.text = roadAddressName
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
-                bottomSheetLayout.visibility = View.VISIBLE
-                true
-            }
-
             // 카메라 이동
             moveCamera(position)
 
@@ -213,10 +203,7 @@ class MainActivity : AppCompatActivity() {
             saveLastMarkerPosition(x, y, placeName, roadAddressName)
 
             // bottom sheet 업데이트
-            bottomSheetTitle.text = placeName
-            bottomSheetAddress.text = roadAddressName
-            bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
-            bottomSheetLayout.visibility = View.VISIBLE
+            updateBottomSheet(placeName, roadAddressName)
         }
     }
 
@@ -248,9 +235,21 @@ class MainActivity : AppCompatActivity() {
             if (placeName.isNotEmpty() && roadAddressName.isNotEmpty()) {
                 Log.d("MainActivity", "Loaded last marker position: lat=$latitude, lon=$longitude, placeName=$placeName, roadAddressName=$roadAddressName")
                 addLabel(placeName, roadAddressName, longitude, latitude)
+                val position = LatLng.from(latitude, longitude)
+                moveCamera(position)
+                updateBottomSheet(placeName, roadAddressName)
+            } else {
+                Log.d("MainActivity", "No place name or road address name found")
             }
         } else {
             Log.d("MainActivity", "No last marker position found in SharedPreferences")
         }
+    }
+
+    private fun updateBottomSheet(placeName: String, roadAddressName: String) {
+        bottomSheetTitle.text = placeName
+        bottomSheetAddress.text = roadAddressName
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+        bottomSheetLayout.visibility = View.VISIBLE
     }
 }
