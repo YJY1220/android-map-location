@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<FrameLayout>
     private lateinit var bottomSheetTitle: TextView
     private lateinit var bottomSheetAddress: TextView
+    private lateinit var bottomSheetLayout: FrameLayout
     private var selectedItems = mutableListOf<MapItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,10 +82,13 @@ class MainActivity : AppCompatActivity() {
         retryButton = findViewById(R.id.retry_button)
 
         // BottomSheet 초기화
-        val bottomSheet = findViewById<FrameLayout>(R.id.bottomSheetLayout)
-        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
+        bottomSheetLayout = findViewById(R.id.bottomSheetLayout)
+        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheetLayout)
         bottomSheetTitle = findViewById(R.id.bottomSheetTitle)
         bottomSheetAddress = findViewById(R.id.bottomSheetAddress)
+
+        // 처음에는 BottomSheet 숨기기
+        bottomSheetLayout.visibility = View.GONE
     }
 
     private fun processIntentData() {
@@ -132,7 +136,6 @@ class MainActivity : AppCompatActivity() {
         })  // 지도 다시 시작
     }
 
-    //지도 돌아갔다가 다시 검색페이지 돌아올 때 해당 저장된 검색어 남아있도록 하기 위함
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == SEARCH_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
@@ -157,7 +160,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    //bottomsheet에 정보추가하도록 바꿈
     private fun addLabel(placeName: String?, roadAddressName: String?, x: Double, y: Double) {
         if (placeName != null && roadAddressName != null) {
             val position = LatLng.from(y, x)
@@ -180,6 +182,7 @@ class MainActivity : AppCompatActivity() {
                 bottomSheetTitle.text = placeName
                 bottomSheetAddress.text = roadAddressName
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+                bottomSheetLayout.visibility = View.VISIBLE
                 true
             }
 
@@ -190,6 +193,7 @@ class MainActivity : AppCompatActivity() {
             bottomSheetTitle.text = placeName
             bottomSheetAddress.text = roadAddressName
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+            bottomSheetLayout.visibility = View.VISIBLE
         }
     }
 
