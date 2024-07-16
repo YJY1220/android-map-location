@@ -21,14 +21,9 @@ import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextStyle
-import com.kakao.vectormap.camera.CameraAnimation
 import com.kakao.vectormap.camera.CameraUpdateFactory
-import com.kakao.vectormap.camera.CameraPosition
 
-private val CameraPosition?.zoom: Int?
-    get() {
-        TODO("Not yet implemented")
-    }
+
 private val Any.longitude: Double
     get() {
         TODO("Not yet implemented")
@@ -37,7 +32,11 @@ private val Any.latitude: Double
     get() {
         TODO("Not yet implemented")
     }
-private val CameraPosition?.target: Any
+private val Any.mapPointGeoCoord: Any
+    get() {
+        TODO("Not yet implemented")
+    }
+private val Any.mapCenterPoint: Any
     get() {
         TODO("Not yet implemented")
     }
@@ -57,12 +56,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomSheetLayout: FrameLayout
     private var selectedItems = mutableListOf<MapItem>()
 
+    private var savedLatitude: Double = 37.5642
+    private var savedLongitude: Double = 127.0
+    private var savedZoomLevel: Float = 10.0f
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         // 카카오 지도 초기화
         mapView = findViewById(R.id.map_view)
+        loadData() // 저장된 위치 불러오기
+
         mapView.start(object : MapLifeCycleCallback() {
             override fun onMapDestroy() {
                 // 지도 API가 정상적으로 종료될 때 호출됨
@@ -220,33 +225,51 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun moveCamera(position: LatLng) {
-        kakaoMap.moveCamera(
-            CameraUpdateFactory.newCenterPosition(position),
-            CameraAnimation.from(10, false, false)
-        )
+        val cameraUpdate = CameraUpdateFactory.newCenterPosition(position)
+        kakaoMap.moveCamera(cameraUpdate)
     }
 
     private fun restoreCameraPosition() {
-        val savedPosition = CameraPositionSharedPreferences.loadCameraPosition(this)
-        if (savedPosition != null) {
-            val (latitude, longitude, zoom) = savedPosition
-            val target = LatLng.from(latitude, longitude)
-            kakaoMap.moveCamera(CameraUpdateFactory.zoomIn())
+        val savedPosition = loadData()
+        val target = LatLng.from(savedPosition.first, savedPosition.second)
+        val cameraUpdate = CameraUpdateFactory.newCenterPosition(target).apply {
+            zoomLevel(savedZoomLevel)
         }
+        kakaoMap.moveCamera(cameraUpdate)
+    }
+
+    private fun zoomLevel(savedZoomLevel: Float) {
+        TODO("Not yet implemented")
     }
 
     private fun saveCameraPosition() {
-        val currentPosition = kakaoMap.cameraPosition.target
-        val zoom = kakaoMap.cameraPosition.zoom
-        CameraPositionSharedPreferences.saveCameraPosition(
-            this,
-            currentPosition.latitude,
-            currentPosition.longitude,
-            zoom
-        )
+        val currentPosition = kakaoMap.mapCenterPoint.mapPointGeoCoord
+        val zoom = kakaoMap.cameraPosition?.zoomLevel
+        saveData(currentPosition.latitude, currentPosition.longitude, zoom)
+    }
+
+    private fun saveData(latitude: Double, longitude: Double, zoom: Int?) {
+        val pref = getSharedPreferences("pref", 0)
+        val edit = pref.edit()
+        edit.putString("latitude", latitude.toString())
+        edit.putString("longitude", longitude.toString())
+        edit.putFloat("zoom", zoom)
+        edit.apply()
+    }
+
+    private fun loadData(): Triple<Double, Double, Float> {
+        val pref = getSharedPreferences("pref", 0)
+        val latitude = pref.getString("latitude", "37.5642")?.toDouble() ?: 37.5642
+        val longitude = pref.getString("longitude", "127.0")?.toDouble() ?: 127.0
+        val zoom = pref.getFloat("zoom", 10.0f)
+        return Triple(latitude, longitude, zoom)
     }
 
     companion object {
         private const val SEARCH_REQUEST_CODE = 1
     }
+}
+
+private fun Any.putFloat(s: String, zoom: Int?) {
+
 }
