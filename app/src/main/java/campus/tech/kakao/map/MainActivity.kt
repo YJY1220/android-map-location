@@ -1,22 +1,20 @@
 package campus.tech.kakao.map
 
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Bundle
-import android.view.View
 import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.ImageButton
-import android.widget.RelativeLayout
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.kakao.vectormap.MapView
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.KakaoMapReadyCallback
 import com.kakao.vectormap.KakaoMap
+import android.view.View
+import android.widget.ImageButton
+import android.widget.RelativeLayout
+import android.widget.TextView
+import android.app.Activity
+import android.widget.FrameLayout
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.label.LabelLayer
 import com.kakao.vectormap.label.LabelOptions
@@ -25,6 +23,24 @@ import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextStyle
 import com.kakao.vectormap.camera.CameraAnimation
 import com.kakao.vectormap.camera.CameraUpdateFactory
+import com.kakao.vectormap.camera.CameraPosition
+
+private val CameraPosition?.zoom: Int?
+    get() {
+        TODO("Not yet implemented")
+    }
+private val Any.longitude: Double
+    get() {
+        TODO("Not yet implemented")
+    }
+private val Any.latitude: Double
+    get() {
+        TODO("Not yet implemented")
+    }
+private val CameraPosition?.target: Any
+    get() {
+        TODO("Not yet implemented")
+    }
 
 class MainActivity : AppCompatActivity() {
 
@@ -40,13 +56,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomSheetAddress: TextView
     private lateinit var bottomSheetLayout: FrameLayout
     private var selectedItems = mutableListOf<MapItem>()
-    private lateinit var sharedPreferences: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        sharedPreferences = getSharedPreferences("kakao_map_prefs", Context.MODE_PRIVATE)
 
         // 카카오 지도 초기화
         mapView = findViewById(R.id.map_view)
@@ -62,17 +75,7 @@ class MainActivity : AppCompatActivity() {
             override fun onMapReady(map: KakaoMap) {
                 kakaoMap = map
                 labelLayer = kakaoMap.labelManager?.layer!!
-
-                // 마지막 저장된 카메라 위치로 이동
-                val lastLat = sharedPreferences.getFloat("last_lat", 0.0f).toDouble()
-                val lastLng = sharedPreferences.getFloat("last_lng", 0.0f).toDouble()
-                val lastZoom = sharedPreferences.getFloat("last_zoom", 10.0f)
-                if (lastLat != 0.0 && lastLng != 0.0) {
-                    kakaoMap.moveCamera(
-                        CameraUpdateFactory.zoomIn(LatLng(lastLat, lastLng), lastZoom.toDouble()),
-                        CameraAnimation.from(0, false, false)
-                    )
-                }
+                restoreCameraPosition()
                 processIntentData()
             }
         })
@@ -91,22 +94,23 @@ class MainActivity : AppCompatActivity() {
             startActivityForResult(intent, SEARCH_REQUEST_CODE)
         }
 
-        // 에러 레이아웃 초기화
+        // 에러 화면 초기화
         errorLayout = findViewById(R.id.error_layout)
         errorMessage = findViewById(R.id.error_message)
         errorDetails = findViewById(R.id.error_details)
         retryButton = findViewById(R.id.retry_button)
 
-        // BottomSheet 초기화
+        // Bottomsheet 초기화
         bottomSheetLayout = findViewById(R.id.bottomSheetLayout)
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheetLayout)
         bottomSheetTitle = findViewById(R.id.bottomSheetTitle)
         bottomSheetAddress = findViewById(R.id.bottomSheetAddress)
 
-        // 처음에는 BottomSheet 숨기기
+        // 처음에는 bottomsheet 숨기기
         bottomSheetLayout.visibility = View.GONE
     }
 
+    // 지도 -> 검색페이지 돌아갈 때 저장된 검색어 목록 그대로 저장
     private fun processIntentData() {
         val placeName = intent.getStringExtra("place_name")
         val roadAddressName = intent.getStringExtra("road_address_name")
@@ -123,18 +127,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        super.onPause()
         saveCameraPosition()
+        super.onPause()
         mapView.pause()  // MapView의 pause 호출
-    }
-
-    private fun saveCameraPosition() {
-        val cameraPosition = kakaoMap.cameraPosition
-        val editor = sharedPreferences.edit()
-        editor.putFloat("last_lat", cameraPosition.target.latitude.toFloat())
-        editor.putFloat("last_lng", cameraPosition.target.longitude.toFloat())
-        editor.putFloat("last_zoom", cameraPosition.zoom.toFloat())
-        editor.apply()
     }
 
     private fun showErrorScreen(error: Exception) {
@@ -146,9 +141,9 @@ class MainActivity : AppCompatActivity() {
     fun onRetryButtonClick(view: View) {
         errorLayout.visibility = View.GONE
         mapView.visibility = View.VISIBLE
+        // 지도 다시 시작
         mapView.start(object : MapLifeCycleCallback() {
             override fun onMapDestroy() {
-                // 지도 API가 정상적으로 종료될 때 호출됨
             }
 
             override fun onMapError(error: Exception) {
@@ -158,10 +153,12 @@ class MainActivity : AppCompatActivity() {
             override fun onMapReady(kakaoMap: KakaoMap) {
                 this@MainActivity.kakaoMap = kakaoMap
                 labelLayer = kakaoMap.labelManager?.layer!!
+                restoreCameraPosition()
             }
-        })  // 지도 다시 시작
+        })
     }
 
+    // 결과 반환
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == SEARCH_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
@@ -170,6 +167,7 @@ class MainActivity : AppCompatActivity() {
                 val roadAddressName = it.getStringExtra("road_address_name")
                 val x = it.getDoubleExtra("x", 0.0)
                 val y = it.getDoubleExtra("y", 0.0)
+                // 다시 돌아갈 때 저장된 검색어 확인
                 selectedItems.clear()
                 val selectedItemsSize = it.getIntExtra("selectedItemsSize", 0)
                 for (i in 0 until selectedItemsSize) {
@@ -198,12 +196,10 @@ class MainActivity : AppCompatActivity() {
                 )
             )
 
-            // 라벨 생성
             labelLayer.addLabel(
                 LabelOptions.from(placeName, position).setStyles(styles).setTexts(placeName)
             )
 
-            // 라벨 클릭 이벤트 처리
             kakaoMap.setOnLabelClickListener { map, layer, label ->
                 bottomSheetTitle.text = placeName
                 bottomSheetAddress.text = roadAddressName
@@ -215,7 +211,7 @@ class MainActivity : AppCompatActivity() {
             // 카메라 이동
             moveCamera(position)
 
-            // BottomSheet에 정보 표시
+            // bottom sheet 업데이트
             bottomSheetTitle.text = placeName
             bottomSheetAddress.text = roadAddressName
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
@@ -227,6 +223,26 @@ class MainActivity : AppCompatActivity() {
         kakaoMap.moveCamera(
             CameraUpdateFactory.newCenterPosition(position),
             CameraAnimation.from(10, false, false)
+        )
+    }
+
+    private fun restoreCameraPosition() {
+        val savedPosition = CameraPositionSharedPreferences.loadCameraPosition(this)
+        if (savedPosition != null) {
+            val (latitude, longitude, zoom) = savedPosition
+            val target = LatLng.from(latitude, longitude)
+            kakaoMap.moveCamera(CameraUpdateFactory.zoomIn())
+        }
+    }
+
+    private fun saveCameraPosition() {
+        val currentPosition = kakaoMap.cameraPosition.target
+        val zoom = kakaoMap.cameraPosition.zoom
+        CameraPositionSharedPreferences.saveCameraPosition(
+            this,
+            currentPosition.latitude,
+            currentPosition.longitude,
+            zoom
         )
     }
 
