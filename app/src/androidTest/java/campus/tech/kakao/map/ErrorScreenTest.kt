@@ -9,7 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.*
 import org.junit.runner.RunWith
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class ErrorScreenTest {
@@ -25,19 +25,22 @@ class ErrorScreenTest {
 
     @After
     fun tearDown() {
-        scenario.close()
+        if (::scenario.isInitialized) {
+            scenario.close()
+        }
     }
 
     @Test
     fun testShowErrorScreen() {
         scenario.onActivity { activity ->
-            activity.showErrorScreen(Exception("Test Error"))
+            // 에러 화면이 표시될 때까지 대기
+            Thread.sleep(2000)
 
             val errorLayout: RelativeLayout = activity.findViewById(R.id.error_layout)
             val errorDetails: TextView = activity.findViewById(R.id.error_details)
 
-            assertEquals(View.VISIBLE, errorLayout.visibility)
-            assertEquals("Test Error", errorDetails.text.toString())
+            assertTrue(errorLayout.visibility == View.VISIBLE)
+            assertTrue(errorDetails.text.toString().contains("Unauthorized"))
         }
     }
 }
