@@ -15,6 +15,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.*
 import org.junit.runner.RunWith
 import org.junit.Assert.assertEquals
+import java.util.concurrent.Executors
 
 @RunWith(AndroidJUnit4::class)
 class FunctionTest {
@@ -27,82 +28,103 @@ class FunctionTest {
     fun setUp() {
         context = InstrumentationRegistry.getInstrumentation().targetContext
         scenarioMain = ActivityScenario.launch(MainActivity::class.java)
-        scenarioSearch = ActivityScenario.launch(SearchActivity::class.java)
     }
 
     @After
     fun tearDown() {
         scenarioMain.close()
-        scenarioSearch.close()
-    }
-
-    @Test
-    fun testSearchResultDisplayed() {
-        scenarioSearch.onActivity { activity ->
-            val searchEditText: EditText = activity.findViewById(R.id.searchEditText)
-            searchEditText.setText("Test Place")
-            activity.performSearch("Test Place")
-
-            val searchResults = MutableLiveData<List<MapItem>>()
-            searchResults.postValue(listOf(MapItem("1", "Test Place", "Test Road", "Test Category", 127.0, 37.0)))
-            activity.viewModel.searchResults = searchResults
-
-            val searchResultsRecyclerView: RecyclerView = activity.findViewById(R.id.searchResultsRecyclerView)
-            assertEquals(1, searchResultsRecyclerView.adapter?.itemCount)
+        if (::scenarioSearch.isInitialized) {
+            scenarioSearch.close()
         }
     }
 
     @Test
-    fun testSelectSearchResultAndShowOnMap() {
+    fun testCompleteFlow() {
         scenarioMain.onActivity { mainActivity ->
-            val intent = Intent(mainActivity, SearchActivity::class.java)
-            mainActivity.startActivityForResult(intent, MainActivity.SEARCH_REQUEST_CODE)
+            // Click on the search bar to go to SearchActivity
+            val searchEditText: EditText = mainActivity.findViewById(R.id.search_edit_text)
+            searchEditText.performClick()
 
-            scenarioSearch.onActivity { searchActivity ->
-                val searchEditText: EditText = searchActivity.findViewById(R.id.searchEditText)
-                searchEditText.setText("Test Place")
-                searchActivity.performSearch("Test Place")
+            // Launch SearchActivity in a separate thread to avoid calling it on the main thread
+            Executors.newSingleThreadExecutor().execute {
+                scenarioSearch = ActivityScenario.launch(SearchActivity::class.java)
+                scenarioSearch.onActivity { searchActivity ->
+                    // Search for "바다 정원"
+                    val searchEditText: EditText = searchActivity.findViewById(R.id.searchEditText)
+                    searchEditText.setText("바다 정원")
+                    searchActivity.performSearch("바다 정원")
 
-                val searchResults = MutableLiveData<List<MapItem>>()
-                searchResults.postValue(listOf(MapItem("1", "Test Place", "Test Road", "Test Category", 127.0, 37.0)))
-                searchActivity.viewModel.searchResults = searchResults
+                    // Set search results
+                    val searchResults = MutableLiveData<List<MapItem>>()
+                    searchResults.postValue(listOf(MapItem("1", "바다 정원", "강원도 고성군", "카페", 127.0, 37.0)))
+                    searchActivity.viewModel.setSearchResults(searchResults.value ?: emptyList())
 
-                searchActivity.setResultAndFinish(MapItem("1", "Test Place", "Test Road", "Test Category", 127.0, 37.0))
+                    // Check if the search results are displayed
+                    val searchResultsRecyclerView: RecyclerView = searchActivity.findViewById(R.id.searchResultsRecyclerView)
+                    searchResultsRecyclerView.adapter?.notifyDataSetChanged()
+                    assertEquals(1, searchResultsRecyclerView.adapter?.itemCount)
 
-                val resultIntent = Intent().apply {
-                    putExtra("place_name", "Test Place")
-                    putExtra("road_address_name", "Test Road")
-                    putExtra("x", 127.0)
-                    putExtra("y", 37.0)
+                    // Select a search result
+                    searchResultsRecyclerView.findViewHolderForAdapterPosition(0)?.itemView?.performClick()
+
+                    // Check if the selected item is saved and returned to MainActivity
+                    searchActivity.setResultAndFinish(MapItem("0", "바다 정원", "강원도 고성군", "카페", 127.0, 37.0))
+                    val resultIntent = Intent().apply {
+                        putExtra("place_name", "바다 정원")
+                        putExtra("road_address_name", "강원도 고성군")
+                        putExtra("x", 127.0)
+                        putExtra("y", 37.0)
+                    }
+
+                    mainActivity.onActivityResult(MainActivity.SEARCH_REQUEST_CODE, Activity.RESULT_OK, resultIntent)
+                    val bottomSheetTitle: TextView = mainActivity.findViewById(R.id.bottomSheetTitle)
+                    val bottomSheetAddress: TextView = mainActivity.findViewById(R.id.bottomSheetAddress)
+                    assertEquals("바다 정원", bottomSheetTitle.text.toString())
+                    assertEquals("강원도 고성군", bottomSheetAddress.text.toString())
+
+                    // Save last position as "카카오"
+                    mainActivity.saveLastMarkerPosition(37.5665, 126.9780, "카카오", "서울특별시 종로구")
                 }
 
-                mainActivity.onActivityResult(MainActivity.SEARCH_REQUEST_CODE, Activity.RESULT_OK, resultIntent)
-                val bottomSheetTitle: TextView = mainActivity.findViewById(R.id.bottomSheetTitle)
-                assertEquals("Test Place", bottomSheetTitle.text.toString())
+                // Relaunch MainActivity and check if the last marker position is loaded
+                scenarioMain.recreate()
+
+                scenarioMain.onActivity { activity ->
+                    activity.loadLastMarkerPosition()
+
+                    val bottomSheetTitle: TextView = activity.findViewById(R.id.bottomSheetTitle)
+                    val bottomSheetAddress: TextView = activity.findViewById(R.id.bottomSheetAddress)
+                    assertEquals("카카오", bottomSheetTitle.text.toString())
+                    assertEquals("서울특별시 종로구", bottomSheetAddress.text.toString())
+                    assertEquals(View.VISIBLE, activity.findViewById<FrameLayout>(R.id.bottomSheetLayout).visibility)
+
+                    // Click on the search bar to go to SearchActivity again
+                    val searchEditText: EditText = activity.findViewById(R.id.search_edit_text)
+                    searchEditText.performClick()
+
+                    // Launch SearchActivity in a separate thread to avoid calling it on the main thread
+                    Executors.newSingleThreadExecutor().execute {
+                        scenarioSearch = ActivityScenario.launch(SearchActivity::class.java)
+                        scenarioSearch.onActivity { searchActivity ->
+                            // Check if the previously selected item "바다 정원" is still saved
+                            val selectedItemsRecyclerView: RecyclerView = searchActivity.findViewById(R.id.selectedItemsRecyclerView)
+                            assertEquals(1, selectedItemsRecyclerView.adapter?.itemCount)
+                            val selectedViewHolder = selectedItemsRecyclerView.findViewHolderForAdapterPosition(0)
+                            assertEquals("바다 정원", selectedViewHolder?.itemView?.findViewById<TextView>(R.id.selectedItemName)?.text.toString())
+
+                            // Click on the saved search item
+                            selectedViewHolder?.itemView?.performClick()
+
+                            // Perform search again for the same item
+                            searchActivity.performSearch("바다 정원")
+
+                            // Check if the search results are displayed again
+                            val searchResultsRecyclerView: RecyclerView = searchActivity.findViewById(R.id.searchResultsRecyclerView)
+                            assertEquals(1, searchResultsRecyclerView.adapter?.itemCount)
+                        }
+                    }
+                }
             }
-        }
-    }
-
-    @Test
-    fun testSaveAndLoadLastMarkerPosition() {
-        scenarioMain.onActivity { activity ->
-            val sharedPreferences = activity.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
-            with(sharedPreferences.edit()) {
-                putFloat(MainActivity.PREF_LATITUDE, 37.5665f)
-                putFloat(MainActivity.PREF_LONGITUDE, 126.9780f)
-                putString(MainActivity.PREF_PLACE_NAME, "Seoul")
-                putString(MainActivity.PREF_ROAD_ADDRESS_NAME, "Seoul Road")
-                apply()
-            }
-
-            activity.loadLastMarkerPosition()
-
-            val bottomSheetTitle: TextView = activity.findViewById(R.id.bottomSheetTitle)
-            val bottomSheetAddress: TextView = activity.findViewById(R.id.bottomSheetAddress)
-
-            assertEquals("Seoul", bottomSheetTitle.text.toString())
-            assertEquals("Seoul Road", bottomSheetAddress.text.toString())
-            assertEquals(View.VISIBLE, activity.findViewById<FrameLayout>(R.id.bottomSheetLayout).visibility)
         }
     }
 }

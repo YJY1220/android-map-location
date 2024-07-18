@@ -226,7 +226,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun saveLastMarkerPosition(latitude: Double, longitude: Double, placeName: String, roadAddressName: String) {
+    fun saveLastMarkerPosition(latitude: Double, longitude: Double, placeName: String, roadAddressName: String) {
         val sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         with(sharedPreferences.edit()) {
             putFloat(PREF_LATITUDE, latitude.toFloat())
