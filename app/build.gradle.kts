@@ -76,5 +76,13 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1")
     implementation("com.google.android.gms:play-services-maps:19.0.0")
     implementation("com.google.android.material:material:1.11.0")
-
+    testImplementation ("junit:junit:4.13.2")
+    androidTestImplementation ("androidx.test.ext:junit:1.1.3")
+    androidTestImplementation ("androidx.test.espresso:espresso-core:3.4.0")
+    androidTestImplementation ("androidx.test:core-ktx:1.4.0")
+    androidTestImplementation ("androidx.test:runner:1.4.0")
+    androidTestImplementation ("androidx.test:rules:1.4.0")
+    androidTestImplementation ("org.mockito:mockito-core:3.11.2")
+    androidTestImplementation ("org.mockito:mockito-android:3.11.2")
+    androidTestImplementation ("androidx.arch.core:core-testing:2.1.0")
 }

@@ -19,7 +19,7 @@ class SearchActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySearchBinding
     private lateinit var sqLiteHelper: SQLiteHelper
-    private lateinit var viewModel: MapViewModel
+    lateinit var viewModel: MapViewModel
     private lateinit var searchAdapter: SearchAdapter
     private lateinit var selectedAdapter: SelectedAdapter
 
@@ -136,13 +136,13 @@ class SearchActivity : AppCompatActivity() {
         })
     }
 
-    private fun performSearch(query: String) {
+    fun performSearch(query: String) {
         binding.searchEditText.setText(query)
         viewModel.searchQuery.value = query
     }
 
     //Main->Search 반환 시 저장된 검색어 그대로
-    private fun setResultAndFinish(selectedItem: MapItem) {
+    fun setResultAndFinish(selectedItem: MapItem) {
         val intent = Intent().apply {
             putExtra("place_name", selectedItem.place_name)
             putExtra("road_address_name", selectedItem.road_address_name)
