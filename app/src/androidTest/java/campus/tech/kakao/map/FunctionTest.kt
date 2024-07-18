@@ -82,8 +82,8 @@ class FunctionTest {
                     assertEquals("바다 정원", bottomSheetTitle.text.toString())
                     assertEquals("강원도 고성군", bottomSheetAddress.text.toString())
 
-                    // Save last position as "카카오"
-                    mainActivity.saveLastMarkerPosition(37.5665, 126.9780, "카카오", "서울특별시 종로구")
+                    // Save last position as "바다 정원"
+                    mainActivity.saveLastMarkerPosition(37.0, 127.0, "바다 정원", "강원도 고성군")
                 }
 
                 // Relaunch MainActivity and check if the last marker position is loaded
@@ -94,8 +94,8 @@ class FunctionTest {
 
                     val bottomSheetTitle: TextView = activity.findViewById(R.id.bottomSheetTitle)
                     val bottomSheetAddress: TextView = activity.findViewById(R.id.bottomSheetAddress)
-                    assertEquals("카카오", bottomSheetTitle.text.toString())
-                    assertEquals("서울특별시 종로구", bottomSheetAddress.text.toString())
+                    assertEquals("바다 정원", bottomSheetTitle.text.toString())
+                    assertEquals("강원도 고성군", bottomSheetAddress.text.toString())
                     assertEquals(View.VISIBLE, activity.findViewById<FrameLayout>(R.id.bottomSheetLayout).visibility)
 
                     // Click on the search bar to go to SearchActivity again
