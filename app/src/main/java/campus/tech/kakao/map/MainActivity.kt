@@ -46,12 +46,12 @@ class MainActivity : AppCompatActivity() {
     private var selectedItems = mutableListOf<MapItem>()
 
     companion object {
-        private const val SEARCH_REQUEST_CODE = 1
-        private const val PREFS_NAME = "LastMarkerPrefs"
-        private const val PREF_LATITUDE = "lastLatitude"
-        private const val PREF_LONGITUDE = "lastLongitude"
-        private const val PREF_PLACE_NAME = "lastPlaceName"
-        private const val PREF_ROAD_ADDRESS_NAME = "lastRoadAddressName"
+        const val SEARCH_REQUEST_CODE = 1
+        const val PREFS_NAME = "LastMarkerPrefs"
+        const val PREF_LATITUDE = "lastLatitude"
+        const val PREF_LONGITUDE = "lastLongitude"
+        const val PREF_PLACE_NAME = "lastPlaceName"
+        const val PREF_ROAD_ADDRESS_NAME = "lastRoadAddressName"
     }
 
 
@@ -134,7 +134,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun showErrorScreen(error: Exception) {
+    fun showErrorScreen(error: Exception) {
         errorLayout.visibility = View.VISIBLE
         errorDetails.text = error.message
         mapView.visibility = View.GONE
@@ -161,7 +161,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // 결과 반환
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == SEARCH_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
             data?.let {
@@ -238,7 +238,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     //마커 다시 로드하기
-    private fun loadLastMarkerPosition() {
+    fun loadLastMarkerPosition() {
         val sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         if (sharedPreferences.contains(PREF_LATITUDE) && sharedPreferences.contains(PREF_LONGITUDE)) {
             val latitude = sharedPreferences.getFloat(PREF_LATITUDE, 0.0f).toDouble()
