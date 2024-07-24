@@ -32,6 +32,7 @@ import com.kakao.vectormap.camera.CameraUpdateFactory
 
 class MainActivity : AppCompatActivity() {
 
+    lateinit var viewModelFactory: MapViewModelFactory
     private lateinit var mapView: MapView
     private lateinit var errorLayout: RelativeLayout
     private lateinit var errorMessage: TextView

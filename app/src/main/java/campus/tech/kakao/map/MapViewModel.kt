@@ -7,8 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
-class MapViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = MapAccess(application)
+class MapViewModel(application: Application, private val repository: MapRepository) : AndroidViewModel(application) {
 
     // 검색한 쿼리 저장 LiveData
     val searchQuery = MutableLiveData<String>()
@@ -38,8 +37,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             // repository에서 결과 가져옴
             val results = repository.searchItems(query)
-            // 검색 결과 - _searchResults
-            _searchResults.postValue(results)
+            _searchResults.postValue(results)  // 검색 결과 - _searchResults
         }
     }
 
