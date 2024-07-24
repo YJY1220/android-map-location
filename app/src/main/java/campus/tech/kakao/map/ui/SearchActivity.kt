@@ -1,4 +1,4 @@
-package campus.tech.kakao.map
+package campus.tech.kakao.map.ui
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -13,7 +13,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import android.app.Activity
 import android.content.Intent
-
+import campus.tech.kakao.map.viewmodel.MapViewModel
+import campus.tech.kakao.map.viewmodel.MapViewModelFactory
+import campus.tech.kakao.map.R
+import campus.tech.kakao.map.util.SQLiteHelper
+import campus.tech.kakao.map.model.MapItem
+import campus.tech.kakao.map.repository.MapRepositoryImpl
 
 class SearchActivity : AppCompatActivity() {
 
@@ -31,16 +36,15 @@ class SearchActivity : AppCompatActivity() {
         sqLiteHelper = SQLiteHelper(this)
         sqLiteHelper.writableDatabase
 
-        val viewModelInit = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
-        viewModel = ViewModelProvider(this, viewModelInit).get(MapViewModel::class.java)
+        val repository = MapRepositoryImpl(application)
+        val viewModelFactory = MapViewModelFactory(application, repository)
+        viewModel = ViewModelProvider(this, viewModelFactory).get(MapViewModel::class.java)
 
         setupRecyclerViews()
         setupSearchEditText()
         setupClearTextButton()
         observeViewModel()
 
-
-        // 선택된 항목 복원
         val selectedItemsSize = intent.getIntExtra("selectedItemsSize", 0)
         val selectedItems = mutableListOf<MapItem>()
         for (i in 0 until selectedItemsSize) {
@@ -58,8 +62,7 @@ class SearchActivity : AppCompatActivity() {
     private fun setupRecyclerViews() {
         searchAdapter = SearchAdapter { item ->
             if (viewModel.selectedItems.value?.contains(item) == true) {
-                Toast.makeText(this, getString(R.string.item_already_selected), Toast.LENGTH_SHORT)
-                    .show()
+                Toast.makeText(this, getString(R.string.item_already_selected), Toast.LENGTH_SHORT).show()
             } else {
                 viewModel.selectItem(item)
                 setResultAndFinish(item)
@@ -70,7 +73,6 @@ class SearchActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(this@SearchActivity)
             adapter = searchAdapter
         }
-
 
         selectedAdapter = SelectedAdapter(
             onItemRemoved = { item -> viewModel.removeSelectedItem(item) },
@@ -110,25 +112,8 @@ class SearchActivity : AppCompatActivity() {
         viewModel.searchResults.observe(this, Observer { results ->
             searchAdapter.submitList(results)
 
-            if (results.isEmpty()) {
-                if (viewModel.searchQuery.value.isNullOrEmpty()) {
-                    binding.noResultsTextView.visibility = View.VISIBLE
-                } else {
-                    binding.noResultsTextView.visibility = View.GONE
-                }
-            } else {
-                binding.noResultsTextView.visibility = View.GONE
-            }
-
-            if (results.isEmpty()) {
-                if (viewModel.searchQuery.value.isNullOrEmpty()) {
-                    binding.searchResultsRecyclerView.visibility = View.GONE
-                } else {
-                    binding.searchResultsRecyclerView.visibility = View.VISIBLE
-                }
-            } else {
-                binding.searchResultsRecyclerView.visibility = View.VISIBLE
-            }
+            binding.noResultsTextView.visibility = if (results.isEmpty() && !viewModel.searchQuery.value.isNullOrEmpty()) View.VISIBLE else View.GONE
+            binding.searchResultsRecyclerView.visibility = if (results.isEmpty()) View.GONE else View.VISIBLE
         })
 
         viewModel.selectedItems.observe(this, Observer { selectedItems ->
@@ -141,7 +126,6 @@ class SearchActivity : AppCompatActivity() {
         viewModel.searchQuery.value = query
     }
 
-    //Main->Search 반환 시 저장된 검색어 그대로
     fun setResultAndFinish(selectedItem: MapItem) {
         val intent = Intent().apply {
             putExtra("place_name", selectedItem.place_name)

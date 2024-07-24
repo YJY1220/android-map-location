@@ -1,4 +1,4 @@
-package campus.tech.kakao.map
+package campus.tech.kakao.map.util
 
 import android.content.ContentValues
 import android.content.Context

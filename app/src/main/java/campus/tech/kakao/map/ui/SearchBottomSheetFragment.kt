@@ -1,4 +1,4 @@
-package campus.tech.kakao.map
+package campus.tech.kakao.map.ui
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import campus.tech.kakao.map.viewmodel.MapViewModel
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import campus.tech.kakao.map.databinding.FragmentSearchBottomSheetBinding
 

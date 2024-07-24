@@ -1,9 +1,10 @@
-package campus.tech.kakao.map
+package campus.tech.kakao.map.ui
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import campus.tech.kakao.map.databinding.ItemSearchResultBinding
+import campus.tech.kakao.map.model.MapItem
 
 class SearchAdapter(
     private val onItemClicked: (MapItem) -> Unit  // 아이템 클릭 시 호출되는 함수

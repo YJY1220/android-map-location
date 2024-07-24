@@ -1,4 +1,4 @@
-package campus.tech.kakao.map
+package campus.tech.kakao.map.model
 
 //이름 보다 알기 쉽게 변경 - api맞춰서
 data class MapItem(

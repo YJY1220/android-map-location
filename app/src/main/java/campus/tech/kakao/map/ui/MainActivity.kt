@@ -1,4 +1,4 @@
-package campus.tech.kakao.map
+package campus.tech.kakao.map.ui
 
 
 import android.content.Context
@@ -19,6 +19,9 @@ import android.widget.RelativeLayout
 import android.widget.TextView
 import android.app.Activity
 import android.widget.FrameLayout
+import campus.tech.kakao.map.viewmodel.MapViewModelFactory
+import campus.tech.kakao.map.R
+import campus.tech.kakao.map.model.MapItem
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.label.LabelLayer

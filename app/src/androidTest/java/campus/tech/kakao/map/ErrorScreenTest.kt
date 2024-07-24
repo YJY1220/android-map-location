@@ -7,6 +7,7 @@ import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import campus.tech.kakao.map.ui.MainActivity
 import org.junit.*
 import org.junit.runner.RunWith
 import org.junit.Assert.assertTrue
